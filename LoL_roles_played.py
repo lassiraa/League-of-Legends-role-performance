@@ -1,30 +1,50 @@
 import requests
 import re
 
-api_key = ""  # your API key here
+api_key = ""  # your Riot API key here
+servers = ["euw1", "eun1", "na1"]
+server = input("Enter server (EUW, EUNE, or NA): ")
 summoner_name = input("Enter summoner name: ")
-url = "https://euw1.api.riotgames.com/lol/summoner/v3/summoners/by-name/" + summoner_name + "?api_key=" + api_key
+
+if server == "EUW":
+    server = servers[0]
+elif server == "EUNE":
+    sever = servers[1]
+else:
+    server = servers[2]
+
+url = "https://" + server + ".api.riotgames.com/lol/summoner/v4/summoners/by-name/" + \
+      summoner_name + "?api_key=" + api_key
 summoner_page = requests.get(url)
-summoner_page = str(summoner_page.content)
-account_id = summoner_page[30:39]
-url = "https://euw1.api.riotgames.com/lol/match/v3/matchlists/by-account/" + account_id + "?queue=420&season=11&api_key=" + api_key
-match_history = str((requests.get(url)).content)
+account_id = re.findall(r'accountId":"(.*?)","', summoner_page.text)
+account_id = account_id[0]
+
+url = "https://euw1.api.riotgames.com/lol/match/v4/matchlists/by-account/" + \
+      account_id + "?queue=420&api_key=" + api_key
+match_history = (requests.get(url)).text
 roles = re.findall(r'"role":"(.*?)","', match_history)
 lanes = re.findall(r'"lane":"(.*?)"}', match_history)
-i = 0
-what_role = []
+
+roles_play_amount = {
+    "Jungle" : 0,
+    "Support" : 0,
+    "Mid": 0,
+    "Adc": 0,
+    "Top": 0
+}
+
+i=0
 for lane in lanes:
-    if lanes[i] == "JUNGLE" and roles[i] == "NONE":
-        what_role.append("JUNGLE")
-    elif lanes[i] == "NONE" and roles[i] == "DUO_SUPPORT":
-        what_role.append("SUPPORT")
-    elif lanes[i] == "MID":
-        what_role.append("MID")
-    elif lanes[i] == "TOP":
-        what_role.append("TOP")
-    elif lanes[i] == "BOTTOM":
-        what_role.append("ADC")
-    else:
-        what_role.append("REMAKE")
+    if lane == "JUNGLE" and roles[i] == "NONE":
+        roles_play_amount["Jungle"] += 1
+    elif lane == "NONE" and roles[i] == "DUO_SUPPORT":
+        roles_play_amount["Support"] += 1
+    elif lane == "MID":
+        roles_play_amount["Mid"] += 1
+    elif lane == "TOP":
+        roles_play_amount["Top"] += 1
+    elif lane == "BOTTOM":
+        roles_play_amount["Adc"] += 1
     i+=1
-print(what_role)  # prints the amount of games you have on each role
+
+print(roles_play_amount) # prints the amount of games you have in each role
